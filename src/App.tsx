@@ -40,12 +40,14 @@ export default function App() {
 
   return (
     <main style={{ fontFamily: "system-ui, sans-serif", padding: 24 }}>
-      <h1>Support Ticket Triage Console</h1>
-      <p style={{ color: "#555" }}>
-        This is the starter. See <code>README.md</code>. The block below
-        dumps the raw response from <code>fetchTickets()</code> so you
-        can see the contract you are working against. Notice that the
-        response shape varies across calls.
+      <h1 className="text-2xl font-bold underline">
+        Support Ticket Triage Console
+      </h1>
+      <p className="text-red-600">
+        This is the starter. See <code>README.md</code>. The block below dumps
+        the raw response from <code>fetchTickets()</code> so you can see the
+        contract you are working against. Notice that the response shape varies
+        across calls.
       </p>
 
       {loading && <p>Loading...</p>}
