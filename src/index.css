@@ -1,1 +1,24 @@
+@import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap");
 @import "tailwindcss";
+
+html,
+body,
+#root {
+  font-family: "Quicksand", sans-serif;
+}
+
+/* Hide scrollbar but keep scroll functionality */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE + Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+[data-sonner-toast] [data-close-button] {
+  top: 22px !important;
+  right: 5px !important;
+  left: auto !important;
+}

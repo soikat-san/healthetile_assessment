@@ -3,12 +3,7 @@ import type {
   TicketStatus,
   UpdateTicketStatusResult,
 } from "../types/ticket";
-import {
-  getTicket,
-  listTickets,
-  patchTicket,
-  resetStore,
-} from "./_store";
+import { getTicket, listTickets, patchTicket, resetStore } from "./_store";
 
 /**
  * Mock backend for the support ticket triage console.
@@ -65,6 +60,7 @@ function wrapListResponse(items: RawTicket[]): unknown {
  *
  * Throws on transport failure (~12% of calls).
  */
+
 export async function fetchTickets(signal?: AbortSignal): Promise<unknown> {
   await delay(randomBetween(300, 1500));
   throwIfAborted(signal);
@@ -87,7 +83,7 @@ export async function fetchTickets(signal?: AbortSignal): Promise<unknown> {
  */
 export async function fetchTicketById(
   ticketId: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<RawTicket> {
   await delay(randomBetween(200, 900));
   throwIfAborted(signal);
@@ -121,7 +117,7 @@ export async function updateTicketStatus(
   ticketId: string,
   nextStatus: TicketStatus,
   expectedVersion: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<UpdateTicketStatusResult> {
   await delay(randomBetween(200, 1200));
   throwIfAborted(signal);
@@ -143,7 +139,10 @@ export async function updateTicketStatus(
     };
   }
 
-  const updated = patchTicket(ticketId, { status: nextStatus, lastUpdatedAt: new Date().toISOString() });
+  const updated = patchTicket(ticketId, {
+    status: nextStatus,
+    lastUpdatedAt: new Date().toISOString(),
+  });
   if (!updated) {
     throw new Error(`Ticket ${ticketId} disappeared during update.`);
   }

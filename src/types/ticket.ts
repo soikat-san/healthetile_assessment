@@ -13,9 +13,10 @@ export type TicketStatus =
   | "new"
   | "in_progress"
   | "waiting_on_customer"
-  | "resolved";
+  | "resolved"
+  | "unknown";
 
-export type TicketPriority = "low" | "medium" | "high" | "urgent";
+export type TicketPriority = "low" | "medium" | "high" | "urgent" | "unknown";
 
 export type CustomerPlan = "free" | "pro" | "enterprise";
 
@@ -114,3 +115,19 @@ export type TicketEvent =
 export type UpdateTicketStatusResult =
   | { ok: true; ticket: RawTicket }
   | { ok: false; conflict: true; latest: RawTicket };
+
+export interface Ticket {
+  id: string;
+  version: number;
+  title: string;
+  customerName: string;
+  customerPlan: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  createdAt: string | null;
+  updatedAt: string | null;
+  tags: string[];
+  messagesCount: number;
+  assignedTo: string | null;
+  malformed: boolean;
+}
