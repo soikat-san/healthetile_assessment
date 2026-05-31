@@ -37,13 +37,13 @@ const Tickets = () => {
 
   return (
     <>
-      <div className="p-4 my-2 bg-zinc-100 rounded-lg border border-red-500">
+      <div className="p-4 my-2 bg-zinc-100 rounded-lg border border-slate-500">
         <div className="overflow-x-auto hide-scrollbar">
           {tickets.length > 0 ? (
             <div className="min-w-max">
               <TicketHeader />
 
-              <div className="h-[calc(100vh-220px)]">
+              <div className="h-[calc(100vh-480px)] md:h-[calc(100vh-220px)]">
                 <List
                   rowComponent={TicketRow}
                   rowCount={tickets.length}

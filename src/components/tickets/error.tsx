@@ -17,7 +17,9 @@ const Error = ({ error, isExhausted, onRetry }: ErrorProps) => {
           className="w-96 h-96"
         />
       </div>
-      <p className="mb-3 text-center text-3xl text-red-600">{error}</p>
+      <p className="mb-3 text-center text-sm md:text-3xl text-red-600">
+        {error}
+      </p>
       {isExhausted && (
         <button
           onClick={onRetry}

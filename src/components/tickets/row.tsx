@@ -1,7 +1,7 @@
 import type { Ticket } from "../../types/ticket";
 import { ticketColumns } from "../../types/columns";
 import type { RowComponentProps } from "react-window";
-import { Eye, OctagonAlert, Ban } from "lucide-react";
+import { Eye, OctagonAlert, Ban, Zap } from "lucide-react";
 import { useTicketStore } from "../../store/ticketStore";
 import { getAlignClass } from "../../utils/get-cell-alignment";
 import { formatDate, formatStatus, capitalize } from "../../utils/helpers";
@@ -43,11 +43,15 @@ function TicketRow({ index, style, ...props }: RowComponentProps<RowData>) {
                   className="flex items-center justify-center"
                   style={{ width: column.width, minWidth: column.width }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedTicketIds.has(ticket.id)}
-                    onChange={() => toggleTicketSelection(ticket.id)}
-                  />
+                  {indicator === "live" ? (
+                    <Zap size={18} className="text-green-500" />
+                  ) : (
+                    <input
+                      type="checkbox"
+                      checked={selectedTicketIds.has(ticket.id)}
+                      onChange={() => toggleTicketSelection(ticket.id)}
+                    />
+                  )}
                 </div>
               </div>
             );

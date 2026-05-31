@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useState } from "react";
 import { CircleX } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { Ticket } from "../../types/ticket";
@@ -13,7 +13,6 @@ type Props = {
 };
 
 const Modal = ({ open, onClose, ticket }: Props) => {
-  const id = useId();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const { changeStatus } = useTicketStatus();
   const [saving, setSaving] = useState(false);
@@ -55,7 +54,7 @@ const Modal = ({ open, onClose, ticket }: Props) => {
       ref={dialogRef}
       onClose={onClose}
       onClick={backdropClick}
-      className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl rounded-lg border 
+      className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-11/12 md:w-full max-w-2xl rounded-lg border 
       border-slate-200 bg-white p-0 shadow-2xl outline-none backdrop:bg-black/50 backdrop:backdrop-blur-sm open:flex open:flex-col"
     >
       <div className="grid grid-cols-12 gap-4 p-4">
@@ -80,69 +79,69 @@ const Modal = ({ open, onClose, ticket }: Props) => {
           <h4 className="text-md italic">{ticket.title}</h4>
         </div>
 
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
           <h4 className="text-md font-semibold">Ticket Status:</h4>
         </div>
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as TicketStatus)}
             className="w-full rounded border px-2 py-1"
           >
             {STATUS_OPTIONS.map((option) => (
-              <option key={id + option.value} value={option.value}>
+              <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </select>
         </div>
 
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
           <h4 className="text-md font-semibold">Ticket Version:</h4>
         </div>
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
           <h4 className="text-md italic">{ticket.version}</h4>
         </div>
 
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
           <h4 className="text-md font-semibold">Assigned To:</h4>
         </div>
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
           <h4 className="text-md italic">{ticket.assignedTo}</h4>
         </div>
 
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
           <h4 className="text-md font-semibold">Priority:</h4>
         </div>
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
           <h4 className="text-md italic">{capitalize(ticket.priority)}</h4>
         </div>
 
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
           <h4 className="text-md font-semibold">Customer Name:</h4>
         </div>
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
           <h4 className="text-md italic">{ticket.customerName}</h4>
         </div>
 
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
-          <h4 className="text-md font-medium">Customer Plan:</h4>
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
+          <h4 className="text-md font-semibold">Customer Plan:</h4>
         </div>
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
           <h4 className="text-md italic">{capitalize(ticket.customerPlan)}</h4>
         </div>
 
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
           <h4 className="text-md font-semibold">Is Malformed:</h4>
         </div>
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
           <h4 className="text-md italic">{ticket.malformed ? "Yes" : "No"}</h4>
         </div>
 
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
           <h4 className="text-md font-semibold">Message Count:</h4>
         </div>
-        <div className="col-span-3 rounded-md border border-neutral-400 p-2">
+        <div className="col-span-6 md:col-span-3 rounded-md border border-neutral-400 p-2">
           <h4 className="text-md italic">{ticket.messagesCount}</h4>
         </div>
 
@@ -167,7 +166,7 @@ const Modal = ({ open, onClose, ticket }: Props) => {
           {ticket.tags.length ? (
             ticket.tags.map((item) => (
               <h6
-                key={id + item}
+                key={item}
                 className="text-sm italic border border-neutral-400 px-2 py-1 rounded-2xl"
               >
                 {item}

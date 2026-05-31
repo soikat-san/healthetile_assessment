@@ -16,7 +16,7 @@ const Loader = ({ retryAttempt }: LoaderProps) => {
         />
       </div>
       {retryAttempt > 0 && (
-        <p className="mt-1 text-center text-3xl text-slate-400">
+        <p className="mt-1 text-center text-sm md:text-3xl text-slate-400">
           Retrying... attempt {retryAttempt} of {3}
         </p>
       )}
