@@ -29,6 +29,8 @@ interface TicketStore {
     version: number,
     patch: Partial<Ticket>,
   ) => void;
+  liveAnnouncement: string;
+  setLiveAnnouncement: (msg: string) => void;
 }
 
 export const useTicketStore = create<TicketStore>((set) => ({
@@ -37,6 +39,9 @@ export const useTicketStore = create<TicketStore>((set) => ({
   error: null,
   selectedTicketIds: new Set(),
   rowIndicators: {},
+
+  liveAnnouncement: "",
+  setLiveAnnouncement: (msg) => set({ liveAnnouncement: msg }),
 
   search: "",
   setSearch: (search) => set({ search }),

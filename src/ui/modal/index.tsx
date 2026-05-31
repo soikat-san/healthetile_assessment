@@ -52,17 +52,27 @@ const Modal = ({ open, onClose, ticket }: Props) => {
   return (
     <dialog
       ref={dialogRef}
+      aria-modal="true"
       onClose={onClose}
       onClick={backdropClick}
+      aria-labelledby="modal-title"
       className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-11/12 md:w-full max-w-2xl rounded-lg border 
       border-slate-200 bg-white p-0 shadow-2xl outline-none backdrop:bg-black/50 backdrop:backdrop-blur-sm open:flex open:flex-col"
     >
       <div className="grid grid-cols-12 gap-4 p-4">
         <div className="col-span-10 underline">
-          <h2 className="text-lg font-semibold">Ticket Details</h2>
+          <h2 id="modal-title" className="text-lg font-semibold">
+            Ticket Details
+          </h2>
         </div>
         <div className="col-span-2 flex justify-end">
-          <CircleX onClick={onClose} className="cursor-pointer" />
+          <button
+            onClick={onClose}
+            aria-label="Close ticket details"
+            className="cursor-pointer"
+          >
+            <CircleX aria-hidden="true" />
+          </button>
         </div>
 
         <div className="col-span-4 rounded-md border border-neutral-400 p-2">
@@ -180,12 +190,16 @@ const Modal = ({ open, onClose, ticket }: Props) => {
         <div className="col-span-12 flex justify-center">
           <button
             disabled={saving}
+            aria-busy={saving}
             onClick={handleSave}
             className="flex items-center cursor-pointer justify-center gap-2 rounded-md w-2/3 bg-yellow-500 py-1 text-white disabled:cursor-not-allowed disabled:opacity-70"
           >
             {saving ? (
               <>
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                <div
+                  aria-hidden="true"
+                  className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+                />
                 Saving...
               </>
             ) : (

@@ -9,19 +9,31 @@ export function useTicketEvents() {
   const upsertLiveEvent = useTicketStore((state) => state.upsertLiveEvent);
   const setRowIndicator = useTicketStore((state) => state.setRowIndicator);
   const clearRowIndicator = useTicketStore((state) => state.clearRowIndicator);
+  const setLiveAnnouncement = useTicketStore(
+    (state) => state.setLiveAnnouncement,
+  );
 
   useEffect(() => {
+    const timers = new Set<ReturnType<typeof setTimeout>>();
+
+    const scheduleIndicatorClear = (ticketId: string) => {
+      const id = setTimeout(() => {
+        timers.delete(id);
+
+        clearRowIndicator(ticketId);
+      }, 3000);
+
+      timers.add(id);
+    };
+
     const unsubscribe = subscribeToTicketEvents((event) => {
       switch (event.type) {
         case "ticket.created": {
           const normalized = normalizeTicket(event.ticket);
           updateTicket(normalized);
           setRowIndicator(normalized.id, "live");
-
-          setTimeout(() => {
-            clearRowIndicator(normalized.id);
-          }, 3000);
-
+          scheduleIndicatorClear(normalized.id);
+          setLiveAnnouncement(`New ticket ${normalized.id} arrived`);
           break;
         }
 
@@ -34,11 +46,10 @@ export function useTicketEvents() {
           });
 
           setRowIndicator(event.ticketId, "live");
-
-          setTimeout(() => {
-            clearRowIndicator(event.ticketId);
-          }, 3000);
-
+          scheduleIndicatorClear(event.ticketId);
+          setLiveAnnouncement(
+            `Ticket ${event.ticketId} was updated by another agent`,
+          );
           break;
         }
 
@@ -48,16 +59,16 @@ export function useTicketEvents() {
           });
 
           setRowIndicator(event.ticketId, "live");
-
-          setTimeout(() => {
-            clearRowIndicator(event.ticketId);
-          }, 3000);
-
+          scheduleIndicatorClear(event.ticketId);
+          setLiveAnnouncement(`Ticket ${event.ticketId} was reassigned`);
           break;
         }
       }
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      timers.forEach(clearTimeout);
+    };
   }, []);
 }

@@ -61,6 +61,10 @@ export function normalizeTicket(raw: RawTicket): Ticket {
     ? raw.priority
     : "unknown";
 
+  if (priority === "unknown") {
+    malformed = true;
+  }
+
   return {
     id: raw.id,
     version: raw.version,

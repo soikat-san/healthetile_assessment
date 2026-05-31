@@ -50,6 +50,7 @@ function TicketRow({ index, style, ...props }: RowComponentProps<RowData>) {
                       type="checkbox"
                       checked={selectedTicketIds.has(ticket.id)}
                       onChange={() => toggleTicketSelection(ticket.id)}
+                      aria-label={`Select ticket ${ticket.id}`}
                     />
                   )}
                 </div>
@@ -65,28 +66,31 @@ function TicketRow({ index, style, ...props }: RowComponentProps<RowData>) {
               >
                 <button
                   className="rounded p-2 text-slate-500 transition hover:bg-slate-100 hover:text-blue-600 cursor-pointer"
-                  title="View Ticket"
+                  title={`View ticket ${ticket.id}`}
+                  aria-label={`View ticket ${ticket.id}`}
                   onClick={() => onViewTicket(ticket)}
                 >
-                  <Eye size={18} />
+                  <Eye size={18} aria-hidden="true" />
                 </button>
 
                 {indicator === "conflict" && (
-                  <button
-                    className="rounded p-2 text-amber-500 transition"
-                    title="Conflict Identifier"
+                  <span
+                    role="img"
+                    aria-label="Conflict: ticket was updated by another agent"
+                    className="rounded p-2 text-amber-500"
                   >
-                    <OctagonAlert size={18} />
-                  </button>
+                    <OctagonAlert size={18} aria-hidden="true" />
+                  </span>
                 )}
 
                 {indicator === "failed" && (
-                  <button
-                    className="rounded p-2 text-red-500 transition"
-                    title="Failed Identifier"
+                  <span
+                    role="img"
+                    aria-label="Update failed"
+                    className="rounded p-2 text-red-500"
                   >
-                    <Ban size={18} />
-                  </button>
+                    <Ban size={18} aria-hidden="true" />
+                  </span>
                 )}
               </div>
             );

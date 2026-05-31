@@ -12,7 +12,7 @@ import Modal from "../../ui/modal";
 import TicketHeader from "./header";
 
 const Tickets = () => {
-  const { tickets, loading, error, onRetry, retryAttempt, isExhausted } =
+  const { tickets, loading, error, retryAttempt, isExhausted, retry } =
     useTickets();
   const [openModal, setOpenModal] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
@@ -32,7 +32,7 @@ const Tickets = () => {
   }
 
   if (error) {
-    return <Error error={error} isExhausted={isExhausted} onRetry={onRetry} />;
+    return <Error error={error} isExhausted={isExhausted} onRetry={retry} />;
   }
 
   return (

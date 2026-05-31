@@ -9,6 +9,10 @@ export function useTicketStatus() {
   const updateTicket = useTicketStore((state) => state.updateTicket);
   const selectedTicketIds = useTicketStore((state) => state.selectedTicketIds);
 
+  const setLiveAnnouncement = useTicketStore(
+    (state) => state.setLiveAnnouncement,
+  );
+
   const clearSelectedTickets = useTicketStore(
     (state) => state.clearSelectedTickets,
   );
@@ -36,7 +40,7 @@ export function useTicketStatus() {
         updateTicket(normalized);
         clearTicketIndicators();
         toastUtil.success("Ticket updated successfully");
-
+        setLiveAnnouncement(`Ticket ${ticketId} updated to ${nextStatus}`);
         return {
           success: true,
           conflict: false,
@@ -47,7 +51,9 @@ export function useTicketStatus() {
       updateTicket(latest);
       setRowIndicator(latest.id, "conflict");
       toastUtil.warning("Ticket changed by another agent !!");
-
+      setLiveAnnouncement(
+        `Conflict on ticket ${ticketId}. Latest version loaded.`,
+      );
       return {
         success: false,
         conflict: true,
@@ -58,7 +64,7 @@ export function useTicketStatus() {
       toastUtil.error(
         error instanceof Error ? error.message : "Failed to update ticket",
       );
-
+      setLiveAnnouncement(`Failed to update ticket ${ticketId}`);
       return {
         success: false,
         conflict: false,

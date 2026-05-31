@@ -1,8 +1,21 @@
 import { lazy } from "react";
+import { useTicketStore } from "../../store/ticketStore";
 
 function Layout({ children }: { children: React.ReactNode }) {
+  const liveAnnouncement = useTicketStore((s) => s.liveAnnouncement);
+
   return (
     <main className="min-h-screen flex flex-col py-2 px-4">
+      {/* Visually hidden live region — screen readers announce changes here */}
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveAnnouncement}
+      </div>
+
       <header className="bg-gray-800 text-white p-4 rounded-lg flex items-center justify-between">
         <p className="text-xs md:text-lg font-semibold italic">
           Healthetile Assessment
