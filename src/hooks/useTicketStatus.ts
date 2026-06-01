@@ -1,5 +1,5 @@
 import { toastUtil } from "../utils/toast";
-import type { TicketStatus } from "../types/tickets";
+import type { TicketStatus } from "../types/ticket";
 import { updateTicketStatus } from "../api/ticketApi";
 import { useTicketStore } from "../store/ticketStore";
 import { normalizeTicket } from "../services/normalizeTicket";

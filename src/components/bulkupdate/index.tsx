@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Select from "../../ui/select";
 import { Delete } from "lucide-react";
-import type { TicketStatus } from "../../types/tickets";
+import type { TicketStatus } from "../../types/ticket";
 import { useTicketStore } from "../../store/ticketStore";
 import { STATUS_OPTIONS } from "../../data/filter-options";
 import { useTicketStatus } from "../../hooks/useTicketStatus";

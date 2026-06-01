@@ -103,7 +103,7 @@ function TicketRow({ index, style, ...props }: RowComponentProps<RowData>) {
                 className={`p-2 border-r border-slate-200 last:border-r-0 box-border flex items-center ${getAlignClass(column.align)}`}
                 style={{ width: column.width, minWidth: column.width }}
               >
-                {formatStatus(value ?? "--")}
+                {formatStatus(String(value ?? "--"))}
               </div>
             );
           }
@@ -115,7 +115,7 @@ function TicketRow({ index, style, ...props }: RowComponentProps<RowData>) {
                 className={`p-2 border-r border-slate-200 last:border-r-0 box-border flex items-center ${getAlignClass(column.align)}`}
                 style={{ width: column.width, minWidth: column.width }}
               >
-                {capitalize(value ?? "--")}
+                {capitalize(String(value ?? "--"))}
               </div>
             );
           }

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { CircleX } from "lucide-react";
 import { useEffect, useRef } from "react";
-import type { Ticket } from "../../types/ticket";
 import { STATUS_OPTIONS } from "../../data/filter-options";
 import { capitalize, formatDate } from "../../utils/helpers";
 import { useTicketStatus } from "../../hooks/useTicketStatus";
+import type { Ticket, TicketStatus } from "../../types/ticket";
 
 type Props = {
   open: boolean;

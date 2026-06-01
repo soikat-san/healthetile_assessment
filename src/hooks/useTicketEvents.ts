@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-
+import { useTicketStore } from "../store/ticketStore";
 import { subscribeToTicketEvents } from "../api/ticketEvents";
 import { normalizeTicket } from "../services/normalizeTicket";
-import { useTicketStore } from "../store/ticketStore";
+import type { TicketStatus, TicketPriority } from "../types/ticket";
 
 export function useTicketEvents() {
   const updateTicket = useTicketStore((state) => state.updateTicket);
@@ -38,18 +38,30 @@ export function useTicketEvents() {
         }
 
         case "ticket.updated": {
-          upsertLiveEvent(event.ticketId, event.version, {
-            status: event.patch.status,
-            priority: event.patch.priority,
-            messagesCount: event.patch.messagesCount,
-            updatedAt: event.patch.lastUpdatedAt,
-          });
+          const patch = event.patch;
 
+          const VALID_STATUS = new Set([
+            "new",
+            "in_progress",
+            "waiting_on_customer",
+            "resolved",
+          ]);
+          const VALID_PRIORITY = new Set(["low", "medium", "high", "urgent"]);
+
+          upsertLiveEvent(event.ticketId, event.version, {
+            ...(patch.status != null && VALID_STATUS.has(patch.status)
+              ? { status: patch.status as TicketStatus }
+              : {}),
+            ...(patch.priority != null && VALID_PRIORITY.has(patch.priority)
+              ? { priority: patch.priority as TicketPriority }
+              : {}),
+            ...(patch.messagesCount != null
+              ? { messagesCount: patch.messagesCount }
+              : {}),
+            updatedAt: patch.lastUpdatedAt ?? null,
+          });
           setRowIndicator(event.ticketId, "live");
           scheduleIndicatorClear(event.ticketId);
-          setLiveAnnouncement(
-            `Ticket ${event.ticketId} was updated by another agent`,
-          );
           break;
         }
 

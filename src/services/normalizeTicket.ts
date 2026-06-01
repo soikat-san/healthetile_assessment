@@ -1,5 +1,5 @@
 import { RawTicket } from "../types/ticket";
-import { Ticket } from "../types/ticket";
+import { Ticket, TicketStatus, TicketPriority } from "../types/ticket";
 
 const VALID_STATUS = new Set([
   "new",
@@ -51,16 +51,16 @@ export function normalizeTicket(raw: RawTicket): Ticket {
     malformed = true;
   }
 
-  const status = VALID_STATUS.has(raw.status ?? "") ? raw.status : "unknown";
-
+  const status = (
+    VALID_STATUS.has(raw.status ?? "") ? raw.status : "unknown"
+  ) as TicketStatus;
   if (status === "unknown") {
     malformed = true;
   }
 
-  const priority = VALID_PRIORITY.has(raw.priority ?? "")
-    ? raw.priority
-    : "unknown";
-
+  const priority = (
+    VALID_PRIORITY.has(raw.priority ?? "") ? raw.priority : "unknown"
+  ) as TicketPriority;
   if (priority === "unknown") {
     malformed = true;
   }
