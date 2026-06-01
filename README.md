@@ -1,290 +1,272 @@
-# React Take-Home: Live Support Ticket Triage Console
+# Submission — Live Support Ticket Triage Console
 
-Build a React application that helps support agents triage a high
-volume of customer support tickets in real time.
+**Author:** Soikat Chakrabarty
 
-You are given a mock backend in `src/api/`. The backend is
-asynchronous, sometimes slow, sometimes fails, returns data in
-inconsistent shapes, and pushes live updates from "other agents"
-through an event stream. Treat it like a real third-party service:
-**you cannot change it, and you must make your UI work in spite of
-it.**
-
-We are not only evaluating whether the app works. We are evaluating
-the choices you make, how you handle edge cases, and whether you can
-defend your design in a follow-up conversation.
-
-You may use AI tools (Copilot, Cursor, ChatGPT, Claude, etc.),
-libraries, documentation, and any online resources. You are
-responsible for the final implementation and must be able to explain
-every meaningful decision.
+> 📄 [View original assignment guidelines →](./ASSIGNMENT.md)
 
 ---
 
-## Time expectation
+## Approach
 
-**Recommended: 3 to 5 hours. Hard cap: 6 hours.**
+The core premise I worked from: the API is untrustworthy and the UI must stay honest about that. Every decision — the normalization boundary, the store shape, the conflict model, the live event merge strategy — flows from that single constraint.
 
-We do not expect you to finish every bonus feature. We are explicitly
-evaluating what you choose to prioritize and what you choose to cut.
-A focused, working slice with thoughtful tradeoffs beats a sprawling,
-half-broken submission.
+I kept the architecture deliberately thin. No over-engineering for scale I don't have, no abstractions that don't earn their keep. The app is a virtualized list with a filter sidebar, a modal for detail/edit, and a live event stream running in the background. The interesting engineering is almost entirely in the seams: the API boundary, the conflict path, and the live event reconciliation.
 
 ---
 
-## Setup
+## Architecture
 
-```bash
-npm install
-npm run dev
+### Component structure
+
+```
+App
+├── useUrlSync()          — hydrates + syncs filters/search to URL
+├── useTicketEvents()     — subscribes to live event stream for app lifetime
+├── Layout                — shell (header, footer, live region for AT)
+│   ├── Filters           — search, status, priority, assignee, sort, malformed toggle
+│   ├── BulkUpdate        — bulk status change for selected tickets
+│   └── Tickets           — virtualized list + modal
+│       ├── TicketHeader  — sticky column headers
+│       ├── TicketRow     — single virtualized row (react-window)
+│       ├── Modal         — ticket detail + inline status editor
+│       ├── Loader        — loading state with retry attempt counter
+│       ├── Error         — error state with manual retry
+│       └── NoData        — empty filtered result
 ```
 
-Open http://localhost:5173. The starter `App.tsx` just dumps the raw
-response of `fetchTickets()` so you can see the shape of the data you
-are working with. You are expected to throw it away and design your
-own architecture.
+### State management
 
-Optional: set `VITE_TICKET_COUNT` to change the dataset size (default
-5000), e.g. `VITE_TICKET_COUNT=20000 npm run dev`.
+Zustand with a single flat store (`ticketStore`). I chose Zustand over TanStack Query deliberately — the assignment's mock API has no caching contract, no stale-time semantics, and no background refetch story, so Query's cache model would have added complexity without benefit. Zustand gives me a plain object I can read and write anywhere.
 
----
+The store is divided by responsibility even though it lives in one `create()` call:
 
-## Tech requirements
+| Slice           | What lives there                                      |
+| --------------- | ----------------------------------------------------- |
+| Server state    | `tickets: Record<string, Ticket>`, `loading`, `error` |
+| UI state        | `search`, `filters`, `selectedTicketIds`              |
+| Ephemeral state | `rowIndicators` (live / conflict / failed)            |
+| AT state        | `liveAnnouncement` (screen reader live region)        |
 
-Use:
+`tickets` is keyed by id (`Record<string, Ticket>`) for O(1) lookups during live event merges and status updates, avoiding linear scans on every incoming event.
 
-- React (functional components)
-- TypeScript (preferred) or JavaScript
-- Any styling approach (vanilla CSS, CSS modules, Tailwind, etc.)
-- Any UI/component library, if you want one
-- Any state management approach, if justified
+### Where the API layer sits
 
-You may use any libraries you like, including but not limited to:
-TanStack Query, SWR, Redux Toolkit, Zustand, Jotai, React Hook Form,
-React Router, Zod / Valibot, TanStack Table, react-window / virtua,
-testing libraries.
+All API calls go through two files: `src/api/ticketApi.ts` and `src/api/ticketEvents.ts`. UI code never imports from `src/data/generateTickets.ts` or `src/api/_store.ts`. The public API surface is the only entry point.
 
-You do **not** need to build a real backend.
+Two service functions sit between the API and the store:
 
----
+- `services/normalizeTicket.ts` — converts `RawTicket` → `Ticket`, absorbs all malformations
+- `services/unwrapTicketsResponse.ts` — handles the three possible response shapes from `fetchTickets()`
 
-## Product context
-
-Support agents need to quickly answer:
-
-1. Which tickets need attention right now?
-2. Which tickets are assigned to whom?
-3. Which customers are affected, and on what plan?
-4. Which tickets are new, in progress, waiting, or resolved?
-5. Can I safely change a ticket's status without stomping someone else's edit?
-6. What does the UI do when the backend hiccups, returns garbage, or pushes a live update that contradicts what I'm looking at?
-
-Design the interface around that workflow. You decide the layout.
+Everything inside the app works with `Ticket`. Nothing inside the app knows about `RawTicket` except those two services.
 
 ---
 
-## Functional requirements
+## Normalization
 
-### 1. Ticket list
+`fetchTickets()` returns `unknown`. `unwrapTicketsResponse` handles three observed shapes:
 
-Display tickets. You may pick any layout: table, cards, split pane,
-master/detail, etc.
-
-The dataset is ~5,000 tickets by default. Your UI should remain
-responsive while the user is searching, filtering, or sorting.
-
-### 2. Search
-
-Search by title, customer name, or ticket id.
-
-### 3. Filtering
-
-Filter by at least:
-
-- status
-- priority
-- assignee
-
-### 4. Sorting
-
-Sort by at least:
-
-- created date
-- last updated date
-- priority
-
-You decide how invalid or missing dates sort.
-
-### 5. Ticket detail view
-
-Allow the agent to inspect a single ticket. Side panel, modal,
-expandable row, dedicated page — your choice.
-
-### 6. Status update
-
-Allow the agent to change a ticket's status. Supported statuses are
-`new`, `in_progress`, `waiting_on_customer`, `resolved`.
-
-`updateTicketStatus(id, status, expectedVersion)` uses optimistic
-concurrency:
-
-- if `expectedVersion` matches the server, the update applies and the
-  new ticket is returned
-- if it does not match (someone else updated the ticket since you
-  last saw it), the call **resolves** (not rejects) with
-  `{ ok: false, conflict: true, latest }`
-- transport errors are still thrown
-
-How you handle conflicts is part of what we are evaluating. Explain
-your approach in the README.
-
-### 7. Live event stream
-
-`subscribeToTicketEvents(listener)` returns an unsubscribe function
-and pushes `ticket.updated`, `ticket.created`, and `ticket.assigned`
-events at random intervals between 1.5 and 5 seconds, simulating
-other agents touching the same data.
-
-The UI must reflect these updates without forcing the user to reload.
-How you reconcile live events with whatever local / optimistic state
-you keep is also part of what we are evaluating.
-
-### 8. Loading, error, empty, and malformed states
-
-The app must gracefully handle:
-
-- initial loading
-- fetch failure (with a way to retry)
-- update failure
-- update conflict
-- empty filtered result
-- malformed ticket data: null customer, customer as a bare string,
-  missing plan, invalid date strings, unknown status / priority
-  values, missing title, snake_case vs camelCase field names
-- a live event referencing a ticket the client has not seen yet
-
-A small but meaningful fraction of the dataset is intentionally
-malformed. The app should not crash on any of it.
-
-### 9. Persistence
-
-Persist at least one meaningful piece of UI state across reloads.
-Examples: selected filters, sort order, selected ticket, layout
-preference. `localStorage`, URL query params, or any other approach
-is fine. Explain your choice.
-
----
-
-## The API
-
-All in `src/api/`:
-
-```ts
-// src/api/ticketApi.ts
-fetchTickets(signal?: AbortSignal): Promise<unknown>
-fetchTicketById(id: string, signal?: AbortSignal): Promise<RawTicket>
-updateTicketStatus(
-  id: string,
-  next: TicketStatus,
-  expectedVersion: number,
-  signal?: AbortSignal
-): Promise<UpdateTicketStatusResult>
-resetTickets(): Promise<void>
-
-// src/api/ticketEvents.ts
-subscribeToTicketEvents(
-  listener: (event: TicketEvent) => void
-): () => void
+```
+unknown response
+├── bare array                    → return as-is
+├── { data: [...] }               → return data
+└── { tickets: [...], total }     → return tickets
 ```
 
-A few things to note about this API:
+If none match, it returns `[]` rather than throwing — the empty state is handled gracefully downstream.
 
-- `fetchTickets()` returns `unknown` because the response shape is
-  inconsistent. Sometimes `{ data: [...] }`, sometimes
-  `{ tickets: [...], total }`, sometimes a bare array. You will need
-  to unwrap it.
-- `fetchTickets()` and `fetchTicketById()` randomly fail (~10-12%).
-- `updateTicketStatus()` randomly fails (~10%) AND randomly returns
-  conflict (~15%, when the version doesn't match).
-- Every ticket carries a `version: number` that the server increments
-  on every server-side mutation, including live events.
+`normalizeTicket` handles every malformation category present in the generator:
 
-The type definitions live in `src/types/ticket.ts`. They are
-intentionally loose because they describe what the backend
-**actually** sends. You are encouraged to define your own narrower
-internal types and normalize at the boundary.
+| Malformation                                     | Handling                                                                  |
+| ------------------------------------------------ | ------------------------------------------------------------------------- |
+| `customer: null`                                 | `customerName = "Unknown customer"`, `malformed = true`                   |
+| `customer: { name }` (plan missing)              | `customerPlan = "unknown"`, `malformed = true`                            |
+| `customer: "bare string"`                        | Use string as name, `malformed = true`                                    |
+| `createdAt: "invalid-date"`                      | Stored as-is, `malformed = true`, rendered as `--`                        |
+| `createdAt: null`, `lastUpdatedAt: "not-a-date"` | Both stored as null/invalid, `malformed = true`                           |
+| `title: ""`                                      | Falls back to `"Untitled ticket"`, `malformed = true`                     |
+| `status: "escalated_v2"`                         | Falls back to `"unknown"`, `malformed = true`                             |
+| `priority: "pending_triage"`                     | Falls back to `"unknown"`, `malformed = true`                             |
+| Snake_case fields                                | Reads `created_at ?? createdAt`, `last_updated_at ?? lastUpdatedAt`, etc. |
 
----
+The `malformed` boolean is stored on every `Ticket` and is used by:
 
-## Critical rule
+- The "Show Malformed Tickets" toggle in filters
+- The "Is Malformed" field in the ticket detail modal
 
-**Do not import from `src/data/generateTickets.ts` in your UI code,
-and do not import from `src/api/_store.ts`. Use only the public
-functions in `src/api/ticketApi.ts` and `src/api/ticketEvents.ts`.**
-
-Bypassing the API defeats the point of the exercise. We will check.
+Invalid dates sort to `-Infinity` — they consistently sink to the bottom in descending order (most recent first) and float to the top in ascending order. This is intentional: malformed tickets don't pollute the top of the triage list.
 
 ---
 
-## What to submit
+## Optimistic vs Pessimistic Updates
 
-1. Your source code (zipped, or as a link to a public repo).
-2. A `SUBMISSION.md` (or appended section in this README) covering:
+I chose **pessimistic updates** for status changes.
 
-   - **Approach**: brief overview.
-   - **Architecture**: component structure, state management, where
-     server state vs UI state lives, where the API layer sits.
-   - **Normalization**: how you handled the inconsistent API shape and
-     the malformed data.
-   - **Optimistic vs pessimistic updates**: which you chose and why.
-   - **Conflict handling**: what happens when `updateTicketStatus`
-     returns a conflict.
-   - **Live events**: how you merge incoming events with local state,
-     including any state the user is currently editing.
-   - **Performance**: what you did for filter / sort / render
-     performance at ~5,000 rows. What would change at 100,000?
-   - **Persistence**: what you persisted, where, and why.
-   - **AI usage**: which tools you used, what they helped with, what
-     you modified or rejected, what you verified by hand.
-   - **Tradeoffs**: what you intentionally did not build, and why.
-   - **Future improvements**: what you would do with more time.
+The reason is the conflict model. `updateTicketStatus` resolves (not rejects) on version conflicts, returning `{ ok: false, conflict: true, latest }`. If I applied optimistic updates, I'd need to roll back on conflict — which means showing the user a state that was never real, then yanking it away. Given that the conflict rate is ~15%, that rollback would be visible often enough to be jarring.
+
+With pessimistic updates:
+
+- The UI shows a saving spinner while the request is in flight
+- On success: the server's returned ticket (with its new version) is written to the store
+- On conflict: the latest server state is written to the store, a conflict row indicator appears, and a toast warns the agent
+- On transport error: a failed row indicator appears, the toast shows the error, the ticket is unchanged
+
+The tradeoff is latency feel — there's a visible wait before the UI updates. At ~10% random failure rate and ~15% conflict rate, I judged that correctness and trust matter more than snappiness for a support triage tool. Agents need to know their edits landed.
 
 ---
 
-## Bonus (optional, in any order)
+## Conflict Handling
 
-These are NOT required. We want to see what you prioritize.
+When `updateTicketStatus` returns `{ ok: false, conflict: true, latest }`:
 
-1. URL-synced filters, search, and sort (back/forward should work).
-2. Debounced or transition-deferred search.
-3. Virtualized list rendering.
-4. Column visibility / layout preference.
-5. Retry button and / or automatic retry-with-backoff for failed fetches.
-6. Toast notifications for successful / failed / conflicted updates.
-7. Bulk status update for multiple selected tickets.
-8. Visual indicator when a ticket changed underneath the user via a
-   live event (a "this ticket changed, refresh?" affordance).
-9. A filter that shows only malformed tickets, useful for QA.
-10. Unit tests for the normalization layer and for filter / sort logic.
-11. Accessibility (keyboard navigation, focus management, ARIA on
-    dynamic regions).
+1. `latest` is normalized and written to the store — the agent immediately sees what the current state actually is
+2. The row gets a `conflict` indicator (amber highlight + `OctagonAlert` icon)
+3. A warning toast fires: _"Ticket changed by another agent"_
+4. The modal closes
+
+The agent can reopen the ticket, see the latest state, and decide whether to re-apply their intended change with the new version number.
+
+**Known tradeoff:** closing the modal on conflict loses the agent's in-flight edit. A more polished flow would keep the modal open, show a diff of what changed, and offer "apply my change anyway" vs "accept server state". I chose not to build this within the time budget — it's the most meaningful missing piece in the UX.
+
+For bulk updates, `Promise.allSettled` runs all status changes concurrently. Each result is handled independently: successes update the store, conflicts apply the latest, failures set the failed indicator. A summary toast shows the counts: _"12 updated • 2 conflicts • 1 failed"_.
 
 ---
 
-## What we are looking for
+## Live Events
 
-Strong submissions tend to:
+`useTicketEvents` is mounted once at the app root (`App.tsx`), not inside the ticket list. This means the subscription is alive for the full page lifetime regardless of what the list is doing.
 
-- Keep a clean boundary between the messy API layer and the rest of
-  the app.
-- Have small, composable components with a clear data flow.
-- Make the optimistic vs pessimistic choice deliberately and handle
-  the failure path.
-- Not crash on a single bit of bad data.
-- Stay responsive while typing in the search box.
-- Reconcile live events without clobbering whatever the user is
-  actively editing.
-- Have a `SUBMISSION.md` that explains tradeoffs honestly, including
-  what was AI-generated and what was not.
+Three event types are handled:
 
-Good luck. Have fun.
+**`ticket.updated` and `ticket.assigned`** go through `upsertLiveEvent` in the store:
+
+```typescript
+upsertLiveEvent: (ticketId, version, patch) => {
+  const existing = state.tickets[ticketId];
+  if (!existing) return state; // unknown ticket — ignore
+  if (existing.version >= version) return state; // stale event — ignore
+  return {
+    tickets: {
+      ...state.tickets,
+      [ticketId]: { ...existing, ...patch, version },
+    },
+  };
+};
+```
+
+The version guard is the critical piece. Events arrive out of order in practice (the mock fires them on random intervals). An event with a lower version than what we hold is silently dropped — we never apply stale data on top of fresher data.
+
+**`ticket.created`** calls `updateTicket` directly, inserting the new ticket into the store map.
+
+**Row indicators:** every handled event sets a `"live"` indicator on the row (green highlight + Zap icon). A `setTimeout` of 3000ms clears it. All timer IDs are tracked in a `Set` inside the effect and cancelled in the cleanup function — no orphaned timers on unmount.
+
+**Reconciliation with in-flight user edits:** the modal's status select is local state initialized from `ticket.status`. If a live event updates the ticket while the modal is open, the store updates (new version, possibly new status), and the modal re-renders with the latest ticket prop. This resets the agent's in-flight edit via `useEffect([ticket])`. This is a known gap — see Tradeoffs.
+
+---
+
+## Performance
+
+### At ~5,000 rows
+
+- **Virtualization:** `react-window` with a fixed row height of 56px. Only the visible rows are in the DOM at any time. Scrolling through 5,000 rows is smooth.
+- **Deferred search:** `useDeferredValue` on the search string. The input always updates immediately; the expensive filter pass is deferred to a lower-priority render. No debounce needed.
+- **Memoized filter + sort:** `useMemo` with `[tickets, deferredSearch, filters, rowIndicators]` as dependencies. The full filter/sort pass only runs when one of those changes.
+- **O(1) ticket lookups:** `Record<string, Ticket>` means live event merges and status updates never scan the array.
+- **Store reads are selective:** every component subscribes to only the slice of the store it needs via selector functions. A live event updating one ticket does not re-render the filter sidebar.
+
+### At ~100,000 rows
+
+The current approach has two weak points at that scale:
+
+1. `Object.values(tickets)` inside `useMemo` allocates a new array on every memo evaluation. At 100k that allocation cost becomes meaningful. The fix is to maintain a stable sorted+filtered array as a derived atom (Jotai) or a separate computed slice, and only recompute the diff when the relevant slice changes.
+
+2. The assignee list in `Filters` derives from `Object.values(tickets).map(...)` on every render. At 100k this needs to be a memoized selector computed once and updated only when assignees change.
+
+3. Filter + sort over 100k objects is a candidate for a Web Worker — move the computation off the main thread entirely and post the result back as a plain array.
+
+4. `react-window`'s fixed-height list scales well — no change needed there. Dynamic heights would require `VariableSizeList` with a measurement cache.
+
+---
+
+## Persistence
+
+**URL query params** via `useUrlSync`.
+
+Every filter, search term, sort field, sort direction, and the malformed toggle are encoded in the URL. On mount the hook reads `window.location.search` and hydrates the store. `popstate` is also handled, so browser back/forward works correctly. Changes are pushed with `replaceState` (not `pushState`) so normal filtering doesn't pollute history.
+
+This was the right choice over `localStorage` because:
+
+- **Shareable:** an agent can copy the URL and send it to a colleague who sees the same filtered view
+- **Bookmarkable:** "show me all urgent unassigned tickets" is a bookmark
+- **Debuggable:** the current filter state is always visible in the address bar
+- **No stale state problem:** closing the tab and reopening always restores intent, not a stale snapshot from a previous session
+
+The one thing not persisted is the selected ticket (open modal). Persisting that would require the detail view to re-fetch on load, which adds a loading state for something that's unlikely to be the right UX on a fresh page load.
+
+---
+
+## AI Usage
+
+I used ChatGPT throughout this assignment as a tool I directed, not a source of
+decisions, and Claude as a code reviewer.
+
+Every architectural choice in this codebase — Zustand over TanStack Query, pessimistic
+updates, `replaceState` over `pushState`, `Promise.allSettled` for bulk updates, the
+version guard in `upsertLiveEvent` — was made by me before or after seeing AI output,
+not because AI suggested it. Where the output diverged from my intent, I discarded
+it or used it as friction to sharpen my own reasoning.
+
+Concretely, AI was useful for three things:
+
+**Boilerplate I already knew the shape of.** Hook skeletons, the Zustand store
+scaffolding, the `react-window` row props wiring. I knew what I wanted, I didn't want
+to type it. I reviewed every line before it went in.
+
+**Sounding board for edge cases.** I described the three `fetchTickets()` response
+shapes and asked for the unwrap logic. I described the eight malformation kinds from
+the generator and asked for a first-pass normalizer. In both cases the output was
+a starting point — the malformation draft used optional chaining that silently swallowed
+errors, which I rewrote to be explicit about each case and always set `malformed = true`
+deliberately.
+
+**Tailwind class combinations.** Fast to generate, easy to verify visually.
+
+AI gave me the bandwidth to go well beyond the core requirements. Without it absorbing
+the boilerplate, I would have spent the available time on scaffolding alone — the bonus
+features, the accessibility layer, the URL sync, the bulk update, the malformed ticket
+filter, the retry backoff — none of those would have made the cut. AI did not build
+them; it cleared the path so I could. The architectural decisions, the conflict model,
+the store design, and every tradeoff call in this codebase are entirely mine.
+
+---
+
+## Tradeoffs
+
+**What I intentionally did not build, and why:**
+
+**Modal stays open after conflict with a diff view.** The right UX is to keep the modal open, show what changed, and offer the agent a choice. I chose not to build this because it requires a meaningful amount of state threading (previous intent vs latest server state) and a diff UI component. The current behavior — apply latest, close, show toast — is safe and unambiguous even if it loses the agent's edit.
+
+**Live event clobbers in-flight modal edit.** If a live event arrives while an agent has the modal open and has changed the status dropdown but not yet saved, the store update resets their local selection. Fixing this requires either not subscribing the modal to the live ticket, or storing the "dirty" local edit separately and merging explicitly. I chose not to fix this — the window is small (1.5–5 seconds between events, and only if the specific ticket is hit) and the fix adds meaningful complexity to the modal.
+
+**No TanStack Query.** The async lifecycle (loading, error, retry, background refresh) is managed manually. This is more code than Query would require. The tradeoff is zero additional abstraction overhead and no mismatch between Query's cache model and the mock API's mutation semantics.
+
+**No unit tests.** The normalization service (`normalizeTicket`) and the filter/sort logic in `useTickets` are both pure functions and highly testable. Given the time budget I prioritized correctness of the running app over test coverage. If I had another hour, the normalization tests would be first.
+
+**Column visibility toggle.** Skipped. The column definitions are in `types/columns.ts` and already data-driven, so adding a visibility toggle would be a UI addition on top of an already-clean foundation. It didn't make the cut within the time budget.
+
+**No keyboard navigation on the virtualized list rows themselves.** `Tab` will reach each row's checkbox and view button, which covers the core interactions. A full roving tabindex grid pattern (arrow keys to navigate between rows) would require meaningful changes to the `react-window` integration and was out of scope.
+
+---
+
+## Future Improvements
+
+Given more time, in priority order:
+
+1. **Modal conflict UX** — keep modal open after conflict, show a before/after diff, let the agent choose to re-apply or accept the server state
+2. **Protect in-flight modal edit from live events** — track a "dirty" flag on the modal's local state; suppress live event resets when the agent has unsaved changes
+3. **Unit tests for normalization and filter logic** — both are pure functions, both have well-defined edge cases, both are straightforward to test with Vitest
+4. **Web Worker for filter/sort at scale** — move the `useMemo` computation off the main thread for 100k+ row datasets
+5. **Memoized assignee selector** — extract the assignee list derivation from the Filters render cycle into a stable Zustand selector
+6. **Full roving tabindex on the ticket list** — arrow key navigation between rows, proper grid ARIA pattern
+7. **Retry on live event subscription loss** — the current event stream has no reconnect logic; a real SSE or WebSocket connection would need exponential backoff reconnection
+8. **Persist selected ticket in URL** — `?ticket=TCK-01234` would open the modal directly on load, useful for sharing a specific ticket with a colleague

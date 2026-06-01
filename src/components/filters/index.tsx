@@ -100,7 +100,7 @@ function Filters() {
           onChange={(v) =>
             setFilters({
               ...filters,
-              sortBy: v as any,
+              sortBy: v as typeof filters.sortBy,
             })
           }
           placeholder="Sort By"
@@ -112,7 +112,7 @@ function Filters() {
           onChange={(v) =>
             setFilters({
               ...filters,
-              sortDirection: v as any,
+              sortDirection: v as typeof filters.sortDirection,
             })
           }
           placeholder="Direction"
