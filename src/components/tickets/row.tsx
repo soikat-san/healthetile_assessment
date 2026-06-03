@@ -23,6 +23,12 @@ function TicketRow({ index, style, ...props }: RowComponentProps<RowData>) {
     (state) => state.toggleTicketSelection,
   );
 
+  // At the top of the component or in utils/helpers.ts
+  const truncate = (value: unknown, max = 50): string => {
+    const str = String(value ?? "--");
+    return str.length > max ? `${str.substring(0, max)}...` : str;
+  };
+
   const baseStyle = "border-slate-300 hover:bg-neutral-300";
   const failedStyle = "border-red-500 bg-red-50 hover:bg-red-100";
   const liveStyle = "border-green-500 bg-green-50 hover:bg-green-100";
@@ -103,7 +109,11 @@ function TicketRow({ index, style, ...props }: RowComponentProps<RowData>) {
                 className={`p-2 border-r border-slate-200 last:border-r-0 box-border flex items-center ${getAlignClass(column.align)}`}
                 style={{ width: column.width, minWidth: column.width }}
               >
-                {formatStatus(String(value ?? "--"))}
+                <div
+                  className={`border px-5 w-40 text-white rounded-full mr-2 ${value === "new" ? "bg-green-600" : value === "in_progress" ? "bg-blue-600" : value === "resolved" ? "bg-pink-600" : "bg-yellow-600"}`}
+                >
+                  {formatStatus(String(value ?? "--"))}
+                </div>
               </div>
             );
           }
@@ -115,6 +125,9 @@ function TicketRow({ index, style, ...props }: RowComponentProps<RowData>) {
                 className={`p-2 border-r border-slate-200 last:border-r-0 box-border flex items-center ${getAlignClass(column.align)}`}
                 style={{ width: column.width, minWidth: column.width }}
               >
+                <div
+                  className={`w-2 h-2 rounded-full mr-2 ${value === "low" ? "bg-neutral-400" : value === "medium" ? "bg-amber-400" : value === "high" ? "bg-lime-400" : "bg-fuchsia-400"}`}
+                />
                 {capitalize(String(value ?? "--"))}
               </div>
             );
@@ -128,7 +141,7 @@ function TicketRow({ index, style, ...props }: RowComponentProps<RowData>) {
             >
               {column.key === "updatedAt" || column.key === "createdAt"
                 ? formatDate(value as string)
-                : String(value ?? "--")}
+                : truncate(value)}
             </div>
           );
         })}
