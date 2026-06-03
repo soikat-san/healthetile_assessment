@@ -23,7 +23,6 @@ function TicketRow({ index, style, ...props }: RowComponentProps<RowData>) {
     (state) => state.toggleTicketSelection,
   );
 
-  // At the top of the component or in utils/helpers.ts
   const truncate = (value: unknown, max = 50): string => {
     const str = String(value ?? "--");
     return str.length > max ? `${str.substring(0, max)}...` : str;
